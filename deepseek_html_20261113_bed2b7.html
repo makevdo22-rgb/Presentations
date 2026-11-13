@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Language of Hands — Fixed Final</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #03050a;
+    --gold: #E2B45C;
+    --gold-light: #F9E596;
+    --gold-dim: rgba(226, 180, 92, 0.4);
+    --text: #F4F1EA;
+    --text-dim: rgba(244, 241, 234, 0.65);
+    --green: #2A9D8F;
+    --red: #E86A5E;
+    
+    --accent: var(--gold);
+    --accent-light: var(--gold-light);
+    --accent-dim: var(--gold-dim);
+  }
+
+  body.emerald-theme {
+    --accent: #2A9D8F;
+    --accent-light: #A8E6CF;
+    --accent-dim: rgba(42, 157, 143, 0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); }
+  body { font-family: 'Inter', sans-serif; -webkit-font-smoothing: antialiased; perspective: 1500px; }
+
+  /* Режим презентации */
+  body.presentation-mode .nav-bar { opacity: 0; pointer-events: none; }
+  body.presentation-mode .cursor-glow { opacity: 0; }
+  body.presentation-mode { cursor: none; }
+
+  /* Курсоры */
+  body { cursor: default; }
+  .text-content { cursor: zoom-in; }
+  .glass-circle { cursor: pointer; }
+  .nav-btn { cursor: pointer; }
+
+  /* Живой курсор */
+  .cursor-glow {
+    position: fixed; width: 300px; height: 300px;
+    background: radial-gradient(circle, var(--accent-dim) 0%, transparent 60%);
+    border-radius: 50%; pointer-events: none; z-index: 1;
+    transform: translate(-50%, -50%); transition: opacity 0.3s, background 0.5s;
+    mix-blend-mode: screen;
+  }
+
+  /* Фон */
+  .aurora-bg {
+    position: fixed; inset: -20vw; z-index: 0;
+    background: 
+      radial-gradient(ellipse at 20% 30%, var(--accent-dim) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 70%, rgba(226, 180, 92, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 50%, rgba(20, 30, 50, 0.5) 0%, transparent 70%);
+    filter: blur(70px);
+    animation: breathe 15s ease-in-out infinite alternate;
+    transition: background 1s ease, filter 1s ease;
+  }
+  body.cinema-mode .aurora-bg { filter: blur(90px); opacity: 1.5; }
+
+  @keyframes breathe {
+    0% { transform: scale(1) translate(0, 0); }
+    100% { transform: scale(1.1) translate(-3%, 3%); }
+  }
+
+  /* Частицы */
+  .global-particles { position: fixed; inset: 0; z-index: 2; pointer-events: none; overflow: hidden; }
+  .particle {
+    position: absolute; background: var(--accent); border-radius: 50%;
+    box-shadow: 0 0 12px var(--accent); opacity: 0; animation: float-up linear infinite;
+    transition: background 0.5s;
+  }
+  @keyframes float-up {
+    0% { transform: translateY(0) scale(0.5); opacity: 0; }
+    10% { opacity: 0.6; } 90% { opacity: 0.6; }
+    100% { transform: translateY(-110vh) scale(1.5); opacity: 0; }
+  }
+  body.hide-particles .global-particles { display: none; }
+
+  /* Виньетка */
+  .vignette {
+    position: fixed; inset: 0; z-index: 5; pointer-events: none;
+    background: 
+      radial-gradient(circle at center, transparent 35%, rgba(3, 5, 10, 0.7) 75%, rgba(3, 5, 10, 0.95) 100%),
+      linear-gradient(to right, rgba(3, 5, 10, 0.5) 0%, transparent 15%, transparent 85%, rgba(3, 5, 10, 0.5) 100%);
+    transition: background 1s ease;
+  }
+  body.cinema-mode .vignette { background: radial-gradient(circle at center, transparent 20%, rgba(0,0,0,0.9) 80%, #000 100%); }
+
+  /* Сцена */
+  .scene {
+    width: 100vw; height: 100vh; position: relative; z-index: 10;
+    transition: transform 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    transform-style: preserve-3d; will-change: transform;
+  }
+
+  /* Слайды */
+  .slide {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    padding: 8vh 8vw 15vh 8vw; 
+    opacity: 0; visibility: hidden; transform: translateZ(-200px) scale(1.1); filter: blur(10px);
+    transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), filter 0.8s ease, visibility 0.8s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transform: translateZ(0) scale(1); filter: blur(0); }
+
+  .flash-overlay {
+    position: fixed; inset: 0; z-index: 50; pointer-events: none;
+    background: radial-gradient(circle at center, var(--accent-dim) 0%, transparent 60%);
+    opacity: 0;
+  }
+  .flash-overlay.animate { animation: flash 1s ease-out; }
+  @keyframes flash { 0% { opacity: 0; transform: scale(0.8); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(1.2); } }
+
+  /* Анимации */
+  .anim-up { transform: translateY(30px); opacity: 0; transition: all 1s cubic-bezier(0.16, 1, 0.3, 1); }
+  .slide.active .anim-up { transform: translateY(0); opacity: 1; }
+  .d1 { transition-delay: 0.1s; } .d2 { transition-delay: 0.2s; } .d3 { transition-delay: 0.35s; }
+
+  /* Типографика */
+  .slide-title {
+    font-family: 'Playfair Display', serif; font-weight: 900;
+    font-size: clamp(2.5rem, 4.5vw, 4.2rem); line-height: 1.1; letter-spacing: -0.01em;
+    text-shadow: 0 4px 20px rgba(0,0,0,0.8);
+  }
+  .slide-title em {
+    font-style: italic; color: var(--accent); font-weight: 700;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 20px var(--accent-dim));
+    transition: all 0.5s ease;
+  }
+  .section-label {
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 2vh; display: flex; align-items: center; gap: 15px;
+    transition: color 0.5s ease;
+  }
+  .section-label::before { content: ""; width: 30px; height: 1px; background: var(--accent); box-shadow: 0 0 10px var(--accent); transition: all 0.5s; }
+
+  /* Слайд 1 */
+  .title-layout { align-items: center; justify-content: center; text-align: center; }
+  .hero-icon {
+    font-size: clamp(4rem, 10vw, 7rem); margin-bottom: 3vh;
+    filter: drop-shadow(0 0 80px var(--accent-dim));
+    animation: gentle-bob 5s ease-in-out infinite;
+    transition: filter 0.5s;
+  }
+  @keyframes gentle-bob { 0%,100%{transform:translateY(0) scale(1);} 50%{transform:translateY(-15px) scale(1.05);} }
+  
+  .divider { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 4vh 0; }
+  .divider::before, .divider::after { content: ""; width: 80px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent), transparent); transition: background 0.5s; }
+  .divider span { width: 8px; height: 8px; background: var(--accent); transform: rotate(45deg); box-shadow: 0 0 25px var(--accent); transition: all 0.5s; }
+  
+  .tagline {
+    font-size: clamp(1rem, 1.5vw, 1.25rem); font-weight: 300;
+    color: var(--text-dim); max-width: 650px; line-height: 1.7; text-shadow: 0 2px 10px rgba(0,0,0,0.8);
+  }
+
+  /* Жесты */
+  .gesture-header { margin-bottom: 5vh; flex-shrink: 0; }
+  .content-grid { display: grid; grid-template-columns: 1fr 1.3fr; gap: 5vw; align-items: center; flex: 1; }
+  
+  .reverse-grid .visual-container { order: 2; }
+  .reverse-grid .text-content { order: 1; }
+
+  .visual-container, .text-content {
+    transition: transform 0.1s ease-out, box-shadow 0.3s ease;
+    will-change: transform; transform-style: preserve-3d;
+  }
+
+  .visual-container { display: flex; justify-content: center; align-items: center; }
+  
+  .glass-circle {
+    width: clamp(160px, 18vw, 240px); height: clamp(160px, 18vw, 240px);
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.08), rgba(255,255,255,0.0));
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+    display: flex; justify-content: center; align-items: center;
+    font-size: clamp(5rem, 9vw, 7rem);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.6), inset 0 0 60px var(--accent-dim), inset 0 1px 0 rgba(255,255,255,0.3);
+    position: relative; z-index: 20; 
+    transform: translateZ(30px);
+    transition: box-shadow 0.5s;
+  }
+  .glass-circle::after {
+    content: ""; position: absolute; inset: -20px; border-radius: 50%;
+    border: 1.5px solid var(--accent-dim); animation: pulse-ring 4s infinite;
+    box-shadow: 0 0 30px var(--accent-dim);
+    transition: all 0.5s;
+  }
+  @keyframes pulse-ring { 0%{transform:scale(0.95); opacity:1;} 100%{transform:scale(1.2); opacity:0;} }
+
+  /* Стекло */
+  .text-content {
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.01) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid var(--accent-dim);
+    border-left: 1px solid var(--accent-dim);
+    border-radius: 24px;
+    padding: 5vh 4vw;
+    backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+    box-shadow: 0 30px 60px rgba(0,0,0,0.4), inset 0 0 30px rgba(255,255,255,0.02);
+    position: relative; overflow: hidden; z-index: 20; 
+    transform: translateZ(20px);
+    transition: border-color 0.5s, transform 0.3s;
+  }
+
+  .text-content:active {
+    transform: translateZ(50px) scale(1.05) !important;
+    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.02) 100%);
+    box-shadow: 0 40px 80px var(--accent-dim), inset 0 0 30px rgba(255,255,255,0.05);
+  }
+  
+  .text-content::after {
+    content: ""; position: absolute; inset: 0;
+    background: radial-gradient(circle 200px at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255,255,255,0.08), transparent 80%);
+    pointer-events: none; z-index: 1; opacity: 0; transition: opacity 0.3s;
+  }
+  .text-content:hover::after { opacity: 1; }
+
+  .text-content p {
+    font-size: clamp(1.1rem, 1.4vw, 1.3rem); line-height: 1.8; font-weight: 300;
+    color: rgba(244, 241, 234, 0.95); text-shadow: 0 1px 5px rgba(0,0,0,0.6);
+    position: relative; z-index: 2; 
+  }
+  
+  .text-content strong { color: var(--accent); font-weight: 600; transition: color 0.5s; }
+  .text-content .warn { color: var(--accent-light); font-weight: 600; transition: color 0.5s; }
+  .text-content .insight { color: var(--accent-dim); font-weight: 600; transition: color 0.5s; }
+
+  /* Финальный слайд */
+  .final-layout { align-items: center; justify-content: center; text-align: center; }
+  .final-layout .glass-circle { margin: 0 auto 4vh auto; width: 130px; height: 130px; font-size: 4rem; }
+  
+  /* Кнопка викторины */
+  .quiz-btn {
+    margin-top: 4vh; padding: 16px 40px; font-size: 1.1rem; font-weight: 600; font-family: 'Inter', sans-serif;
+    color: var(--bg); background: linear-gradient(135deg, var(--accent) 0%, var(--accent-light) 100%);
+    border: none; border-radius: 30px; cursor: pointer;
+    box-shadow: 0 10px 30px var(--accent-dim);
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .quiz-btn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 15px 40px var(--accent-dim); }
+
+  /* Модальное окно викторины */
+  .quiz-modal {
+    position: fixed; inset: 0; z-index: 1000; background: rgba(3, 5, 10, 0.85);
+    backdrop-filter: blur(15px); display: flex; align-items: center; justify-content: center;
+    opacity: 0; pointer-events: none; transition: opacity 0.4s ease;
+  }
+  .quiz-modal.active { opacity: 1; pointer-events: auto; }
+  
+  .quiz-container {
+    background: linear-gradient(135deg, rgba(30, 40, 60, 0.9) 0%, rgba(10, 15, 25, 0.95) 100%);
+    border: 1px solid var(--accent-dim); border-top: 2px solid var(--accent);
+    border-radius: 24px; width: 90%; max-width: 650px; padding: 40px;
+    box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+    position: relative; transform: translateY(20px); transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .quiz-modal.active .quiz-container { transform: translateY(0); }
+
+  .quiz-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 15px; }
+  .quiz-progress { color: var(--accent); font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .quiz-close { background: none; border: none; color: var(--text-dim); font-size: 1.5rem; cursor: pointer; transition: color 0.2s; }
+  .quiz-close:hover { color: var(--text); }
+
+  .quiz-question { font-family: 'Playfair Display', serif; font-size: 1.6rem; font-weight: 700; margin-bottom: 30px; line-height: 1.3; }
+  .quiz-options { display: flex; flex-direction: column; gap: 12px; }
+  
+  .quiz-option {
+    padding: 16px 20px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; color: var(--text); font-size: 1.05rem; text-align: left; cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .quiz-option:hover { background: rgba(255,255,255,0.08); border-color: var(--accent-dim); }
+  .quiz-option.correct { background: rgba(42, 157, 143, 0.2); border-color: var(--green); color: #fff; }
+  .quiz-option.wrong { background: rgba(232, 106, 94, 0.2); border-color: var(--red); color: #fff; }
+  .quiz-option:disabled { cursor: default; }
+
+  .quiz-result { text-align: center; display: none; }
+  .quiz-result h2 { font-family: 'Playfair Display', serif; color: var(--accent); font-size: 2rem; margin-bottom: 10px; }
+  .quiz-result p { color: var(--text-dim); font-size: 1.1rem; margin-bottom: 20px; }
+  .quiz-restart {
+    background: transparent; border: 1px solid var(--accent); color: var(--accent);
+    padding: 10px 24px; border-radius: 20px; font-size: 1rem; cursor: pointer; transition: all 0.2s;
+  }
+  .quiz-restart:hover { background: var(--accent); color: var(--bg); }
+
+  /* Навигация */
+  .nav-bar {
+    position: fixed; bottom: 4vh; left: 50%; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 30px; z-index: 9999; pointer-events: auto;
+    transition: opacity 0.3s;
+  }
+  .nav-btn {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: #0b1224; border: 1px solid var(--accent-dim);
+    color: var(--accent); font-size: 1.4rem; cursor: pointer;
+    transition: all 0.3s ease; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+  }
+  .nav-btn:hover { background: var(--accent); color: #0b1224; border-color: var(--accent); transform: scale(1.1); }
+  
+  .progress-container { 
+    display: flex; gap: 10px; align-items: center;
+    background: #0b1224; padding: 10px 16px; border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.05); pointer-events: auto;
+  }
+  .progress-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.15);
+    transition: all 0.4s ease; cursor: pointer;
+  }
+  .progress-dot.active { background: var(--accent); width: 24px; border-radius: 4px; box-shadow: 0 0 15px var(--accent); transition: all 0.5s; }
+
+  /* Прогресс-бар вверху */
+  .top-progress {
+    position: fixed; top: 0; left: 0; height: 3px; background: var(--accent);
+    width: 0%; z-index: 10000; transition: width 0.3s ease;
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  /* Всплывающее уведомление */
+  .toast {
+    position: fixed; top: 3vh; left: 50%; transform: translate(-50%, -20px);
+    background: #0b1224; border: 1px solid var(--accent); color: var(--accent);
+    padding: 12px 24px; border-radius: 30px; font-family: 'Inter', sans-serif;
+    font-size: 0.95rem; font-weight: 600; letter-spacing: 0.05em;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+    opacity: 0; pointer-events: none; z-index: 10000;
+    transition: opacity 0.3s, transform 0.3s;
+  }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  @media (max-width: 900px) {
+    .content-grid { grid-template-columns: 1fr; gap: 4vh; }
+    .visual-container { order: -1 !important; }
+    .text-content { order: 2 !important; }
+    .glass-circle { width: 130px; height: 130px; font-size: 4rem; }
+    .text-content { padding: 3vh 5vw; }
+    .text-content p { font-size: 1.05rem; }
+    .quiz-container { padding: 25px; }
+    .quiz-question { font-size: 1.3rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Новые элементы -->
+<div class="top-progress" id="top-progress"></div>
+<div class="toast" id="toast">Включено</div>
+
+<div class="cursor-glow" id="cursor-glow"></div>
+<div class="aurora-bg" id="aurora-bg"></div>
+<div class="global-particles" id="global-particles"></div>
+<div class="vignette"></div>
+<div class="flash-overlay" id="flash"></div>
+
+<div class="scene" id="scene">
+  <div class="deck">
+    <section class="slide title-layout active" id="slide-1">
+      <div class="hero-icon anim-up d1">🖐️</div>
+      <h1 class="slide-title anim-up d2">The Language <em>of Hands</em></h1>
+      <div class="divider anim-up d2"><span></span></div>
+      <p class="tagline anim-up d3">One gesture — a world of meanings. <br>How the same hand sign can wish luck, start a fight, or threaten someone.</p>
+    </section>
+
+    <section class="slide" id="slide-2">
+      <div class="gesture-header anim-up d1">
+        <div class="section-label">Gesture 01 / 03</div>
+        <h2 class="slide-title">Crossed Fingers: <em>Luck or Insult?</em></h2>
+      </div>
+      <div class="content-grid">
+        <div class="visual-container anim-up d2 tilt-effect">
+          <div class="glass-circle">🤞</div>
+        </div>
+        <div class="text-content anim-up d3 tilt-effect">
+          <p>In the <strong>UK and USA</strong>, crossing fingers means "Good luck" or cancelling a promise. But in <strong>Vietnam</strong>, this exact gesture is <span class="warn">extremely rude</span>, equivalent to the middle finger. <br><br>A simple wish for luck in London becomes a serious insult in Hanoi.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-3">
+      <div class="gesture-header anim-up d1">
+        <div class="section-label">Gesture 02 / 03</div>
+        <h2 class="slide-title">Finger Purse: <em>Argument or Pause?</em></h2>
+      </div>
+      <div class="content-grid reverse-grid">
+        <div class="visual-container anim-up d2 tilt-effect">
+          <div class="glass-circle">🤌</div>
+        </div>
+        <div class="text-content anim-up d3 tilt-effect">
+          <p>In <strong>Italy</strong>, the pinched fingers mean "What do you want?!" — a <span class="warn">confrontational</span> gesture used in arguments. <br><br>Yet in <strong>India</strong>, the exact same hand shape means "Wait a moment" — <span class="insight">polite and calm</span>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" id="slide-4">
+      <div class="gesture-header anim-up d1">
+        <div class="section-label">Gesture 03 / 03</div>
+        <h2 class="slide-title">The Fig: <em>Good Luck or Rude?</em></h2>
+      </div>
+      <div class="content-grid">
+        <div class="visual-container anim-up d2 tilt-effect">
+          <div class="glass-circle">🤏</div>
+        </div>
+        <div class="text-content anim-up d3 tilt-effect">
+          <p>In <strong>Brazil and Portugal</strong>, the fig sign brings <span class="insight">good luck</span> and wards off the evil eye. <br><br>But in <strong>Turkey and Russia</strong>, it is a <span class="warn">rude refusal</span> equal to the middle finger.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide final-layout" id="slide-5">
+      <div class="glass-circle anim-up d1">🌍</div>
+      <h2 class="slide-title anim-up d2">Remember: <em>Hands Speak Loudly</em></h2>
+      <div class="divider anim-up d2"><span></span></div>
+      <p class="tagline anim-up d3" style="max-width: 800px;">
+        A gesture that feels natural at home can <strong>offend, confuse, or threaten</strong> someone on the other side of the world. <br><br>Before you wave, point, or raise a finger abroad — <strong>ask yourself what it really means.</strong>
+      </p>
+      
+      <button class="quiz-btn anim-up d3" onclick="openQuiz()">
+        <span>🎯</span> Test Your Knowledge
+      </button>
+    </section>
+  </div>
+</div>
+
+<!-- Модальное окно викторины -->
+<div class="quiz-modal" id="quiz-modal">
+  <div class="quiz-container">
+    <div class="quiz-header">
+      <div class="quiz-progress" id="quiz-progress">Question 1 of 3</div>
+      <button class="quiz-close" onclick="closeQuiz()">✕</button>
+    </div>
+    <div class="quiz-question" id="quiz-question">What does the crossed fingers gesture mean in Vietnam?</div>
+    <div class="quiz-options" id="quiz-options"></div>
+    <div class="quiz-result" id="quiz-result">
+      <h2>Quiz Complete! 🎉</h2>
+      <p id="quiz-score-text">You scored 0 out of 3.</p>
+      <button class="quiz-restart" onclick="restartQuiz()">Try Again</button>
+    </div>
+  </div>
+</div>
+
+<!-- Навигация -->
+<div class="nav-bar">
+  <button class="nav-btn" id="prev-btn">‹</button>
+  <div class="progress-container" id="progress-dots">
+    <div class="progress-dot active" onclick="showSlide(0)"></div>
+    <div class="progress-dot" onclick="showSlide(1)"></div>
+    <div class="progress-dot" onclick="showSlide(2)"></div>
+    <div class="progress-dot" onclick="showSlide(3)"></div>
+    <div class="progress-dot" onclick="showSlide(4)"></div>
+  </div>
+  <button class="nav-btn" id="next-btn">›</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const dots = document.querySelectorAll('.progress-dot');
+  const scene = document.getElementById('scene');
+  const flash = document.getElementById('flash');
+  const cursorGlow = document.getElementById('cursor-glow');
+  const topProgress = document.getElementById('top-progress');
+  const toast = document.getElementById('toast');
+  let currentSlide = 0;
+
+  // Всплывающее уведомление
+  let toastTimeout;
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.classList.remove('show');
+    }, 2000);
+  }
+
+  // Восстановление позиции
+  const savedSlide = localStorage.getItem('presentationSlide');
+  if (savedSlide !== null) {
+    currentSlide = parseInt(savedSlide);
+    if (currentSlide >= slides.length) currentSlide = 0;
+    updateSlide(currentSlide);
+  }
+
+  function updateSlide(index) {
+    slides.forEach((slide, i) => slide.classList.toggle('active', i === index));
+    dots.forEach((dot, i) => dot.classList.toggle('active', i === index));
+    
+    const percent = (index / (slides.length - 1)) * 100;
+    topProgress.style.width = `${percent}%`;
+    
+    flash.classList.remove('animate');
+    void flash.offsetWidth;
+    flash.classList.add('animate');
+    
+    localStorage.setItem('presentationSlide', index);
+  }
+
+  function showSlide(index) {
+    if (index < 0) index = 0;
+    if (index >= slides.length) index = slides.length - 1;
+    if (index === currentSlide) return;
+    currentSlide = index;
+    updateSlide(index);
+  }
+
+  document.getElementById('next-btn').addEventListener('click', () => showSlide(currentSlide + 1));
+  document.getElementById('prev-btn').addEventListener('click', () => showSlide(currentSlide - 1));
+
+  // ГОРЯЧИЕ КЛАВИШИ
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') showSlide(currentSlide + 1);
+    if (e.key === 'ArrowLeft') showSlide(currentSlide - 1);
+    if (e.key >= '1' && e.key <= '5') showSlide(parseInt(e.key) - 1);
+
+    // Оставляем только F и E для спикера
+    if (e.key.toLowerCase() === 'f') {
+      document.body.classList.toggle('presentation-mode');
+      showToast(document.body.classList.contains('presentation-mode') ? 'Режим презентации ВКЛ' : 'Режим презентации ВЫКЛ');
+    }
+    if (e.key.toLowerCase() === 'e') {
+      document.body.classList.toggle('exam-mode');
+      showToast(document.body.classList.contains('exam-mode') ? 'Режим экзамена ВКЛ' : 'Режим экзамена ВЫКЛ');
+    }
+
+    // Визуальные фишки
+    if (e.key.toLowerCase() === 'c') {
+      document.body.classList.toggle('emerald-theme');
+      showToast(document.body.classList.contains('emerald-theme') ? 'Изумрудная палитра' : 'Золотая палитра');
+    }
+    if (e.key.toLowerCase() === 'n') {
+      document.body.classList.toggle('cinema-mode');
+      showToast(document.body.classList.contains('cinema-mode') ? 'Режим кино ВКЛ' : 'Режим кино ВЫКЛ');
+    }
+    if (e.key.toLowerCase() === 'x') {
+      document.body.classList.toggle('hide-particles');
+      showToast(document.body.classList.contains('hide-particles') ? 'Частицы скрыты' : 'Частицы включены');
+    }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', (e) => { touchStartX = e.changedTouches[0].screenX; });
+  document.addEventListener('touchend', (e) => {
+    let touchEndX = e.changedTouches[0].screenX;
+    if (touchStartX - touchEndX > 50) showSlide(currentSlide + 1);
+    if (touchEndX - touchStartX > 50) showSlide(currentSlide - 1);
+  });
+
+  // ЧАСТИЦЫ
+  function createGlobalParticles() {
+    const container = document.getElementById('global-particles');
+    for (let i = 0; i < 60; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      const size = Math.random() * 3 + 1.5;
+      p.style.width = `${size}px`; p.style.height = `${size}px`;
+      p.style.left = `${Math.random() * 100}%`;
+      p.style.animationDuration = `${Math.random() * 15 + 10}s`;
+      p.style.animationDelay = `${Math.random() * 15}s`;
+      p.style.bottom = `-20px`;
+      container.appendChild(p);
+    }
+  }
+  createGlobalParticles();
+
+  // ДВИЖЕНИЕ МЫШКИ
+  document.addEventListener('mousemove', (e) => {
+    cursorGlow.style.left = `${e.clientX}px`;
+    cursorGlow.style.top = `${e.clientY}px`;
+
+    const x = (e.clientX / window.innerWidth - 0.5) * 2;
+    const y = (e.clientY / window.innerHeight - 0.5) * 2;
+    scene.style.transform = `rotateX(${y * -3}deg) rotateY(${x * 3}deg) scale(1.02)`;
+
+    const activeSlide = document.querySelector('.slide.active');
+    if (!activeSlide) return;
+
+    const cards = activeSlide.querySelectorAll('.tilt-effect');
+    cards.forEach(card => {
+      const rect = card.getBoundingClientRect();
+      const cardX = e.clientX - rect.left;
+      const cardY = e.clientY - rect.top;
+
+      card.style.setProperty('--mouse-x', `${cardX}px`);
+      card.style.setProperty('--mouse-y', `${cardY}px`);
+
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((cardY - centerY) / centerY) * -4;
+      const rotateY = ((cardX - centerX) / centerX) * 4;
+      
+      card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+    });
+  });
+
+  document.addEventListener('mouseleave', () => {
+    cursorGlow.style.opacity = '0';
+    scene.style.transform = `rotateX(0deg) rotateY(0deg) scale(1)`;
+  });
+  document.addEventListener('mouseenter', () => { cursorGlow.style.opacity = '1'; });
+
+  // ИСКРЫ ПРИ КЛИКЕ
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.nav-bar') || e.target.closest('.quiz-modal')) return;
+    createSparkles(e.clientX, e.clientY);
+  });
+
+  function createSparkles(x, y) {
+    const burst = document.createElement('div');
+    burst.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:10px;height:10px;border-radius:50%;background:var(--accent);pointer-events:none;z-index:9999;box-shadow:0 0 20px var(--accent);transform:translate(-50%,-50%);animation:burst 0.8s ease-out forwards;`;
+    document.body.appendChild(burst);
+    setTimeout(() => burst.remove(), 800);
+
+    for (let i = 0; i < 8; i++) {
+      const spark = document.createElement('div');
+      spark.style.cssText = `position:fixed;left:${x}px;top:${y}px;width:4px;height:4px;border-radius:50%;background:var(--accent-light);pointer-events:none;z-index:9999;transform:translate(-50%,-50%);transition:all 0.6s cubic-bezier(0.16,1,0.3,1);`;
+      document.body.appendChild(spark);
+      const angle = Math.random() * Math.PI * 2;
+      const distance = Math.random() * 80 + 20;
+      requestAnimationFrame(() => {
+        spark.style.transform = `translate(calc(-50% + ${Math.cos(angle)*distance}px), calc(-50% + ${Math.sin(angle)*distance}px)) scale(0)`;
+        spark.style.opacity = '0';
+      });
+      setTimeout(() => spark.remove(), 600);
+    }
+  }
+
+  // ВИКТОРИНА
+  const quizData = [
+    { question: "What does the crossed fingers gesture 🤞 mean in Vietnam?", options: ["Good luck", "A very rude insult", "Let's be friends"], correct: 1 },
+    { question: "What does the finger purse 🤌 mean in India?", options: ["Wait a moment", "What do you want?", "You are crazy"], correct: 0 },
+    { question: "What does the fig sign 🤏 mean in Brazil?", options: ["A rude refusal", "Good luck and protection", "I need money"], correct: 1 }
+  ];
+
+  let currentQuestion = 0, score = 0;
+  const quizModal = document.getElementById('quiz-modal');
+  const quizQuestion = document.getElementById('quiz-question');
+  const quizOptions = document.getElementById('quiz-options');
+  const quizProgress = document.getElementById('quiz-progress');
+  const quizResult = document.getElementById('quiz-result');
+  const quizScoreText = document.getElementById('quiz-score-text');
+
+  function openQuiz() {
+    quizModal.classList.add('active');
+    currentQuestion = 0; score = 0;
+    quizResult.style.display = 'none';
+    quizOptions.style.display = 'flex';
+    quizQuestion.style.display = 'block';
+    loadQuestion();
+  }
+
+  function closeQuiz() { quizModal.classList.remove('active'); }
+
+  function loadQuestion() {
+    const q = quizData[currentQuestion];
+    quizProgress.textContent = `Question ${currentQuestion + 1} of ${quizData.length}`;
+    quizQuestion.textContent = q.question;
+    quizOptions.innerHTML = '';
+    q.options.forEach((opt, index) => {
+      const btn = document.createElement('button');
+      btn.className = 'quiz-option';
+      btn.textContent = opt;
+      btn.onclick = () => selectAnswer(index, btn);
+      quizOptions.appendChild(btn);
+    });
+  }
+
+  function selectAnswer(index, btn) {
+    const q = quizData[currentQuestion];
+    const allBtns = quizOptions.querySelectorAll('.quiz-option');
+    allBtns.forEach(b => b.disabled = true);
+
+    if (index === q.correct) {
+      btn.classList.add('correct'); score++;
+    } else {
+      btn.classList.add('wrong');
+      allBtns[q.correct].classList.add('correct');
+    }
+
+    setTimeout(() => {
+      currentQuestion++;
+      if (currentQuestion < quizData.length) loadQuestion();
+      else showResult();
+    }, 1200);
+  }
+
+  function showResult() {
+    quizOptions.style.display = 'none';
+    quizQuestion.style.display = 'none';
+    quizResult.style.display = 'block';
+    quizProgress.textContent = 'Finished';
+    quizScoreText.textContent = `You scored ${score} out of ${quizData.length}.`;
+    
+    if (score >= 2) {
+      for (let i = 0; i < 10; i++) {
+        setTimeout(() => {
+          createSparkles(Math.random() * window.innerWidth, Math.random() * window.innerHeight * 0.5);
+        }, i * 150);
+      }
+    }
+  }
+
+  function restartQuiz() { openQuiz(); }
+
+  // Добавляем стиль для анимации взрыва
+  const style = document.createElement('style');
+  style.textContent = `@keyframes burst { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(4); opacity: 0; } }`;
+  document.head.appendChild(style);
+</script>
+</body>
+</html>
